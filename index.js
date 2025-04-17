@@ -1,99 +1,122 @@
+import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Elementos do DOM (ajustados para bater com o HTML)
+const chatMessages = document.getElementById("chat-messages");
+const messageInput = document.getElementById("user-input");
+const sendButton = document.getElementById("send-button");
+const typingIndicator = document.getElementById("typing-indicator");
 
-// Configure a chave da API
-const genAI = new GoogleGenerativeAI(AIzaSyCq6BRjupNXHgvC0OK5i_hYj-_3rQ796X);
+// Configuração da API
+const API_KEY = "AIzaSyCq6BRjupNXHgvC0OK5i_hYj-_3rQ796XQ";
+const genAI = new GoogleGenerativeAI(API_KEY);
 
-async function run(prompt) {
-  // Para texto-para-texto use o modelo gemini-pro
-  const model = genAI.getModel({ 
-    model: "gemini-pro",
-    generationConfig: {
-      stopSequences: [],
-      maxOutputTokens: 800, // Aumentei para permitir respostas mais detalhadas sobre física
-      temperature: 0.4, // Diminuí um pouco para obter respostas mais precisas
-      topP: 0.95,
-      topK: 40,
-    },
-    safetySettings: [
-      {
-        category: "HARM_CATEGORY_HARASSMENT",
-        threshold: "BLOCK_MEDIUM_AND_ABOVE",
-      },
-      {
-        category: "HARM_CATEGORY_HATE_SPEECH",
-        threshold: "BLOCK_MEDIUM_AND_ABOVE",
-      },
-      {
-        category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-        threshold: "BLOCK_MEDIUM_AND_ABOVE",
-      },
-      {
-        category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-        threshold: "BLOCK_MEDIUM_AND_ABOVE",
-      },
-    ],
-  });
+// Instrução do sistema
+const systemInstruction = `
+Aja como um mestre em Física, com profundo conhecimento em todas as áreas da disciplina, incluindo mecânica clássica, termodinâmica, eletromagnetismo, óptica, física moderna (relatividade e mecânica quântica), física de partículas, astrofísica e física computacional.
 
-  // Cria um chat com histórico e instrução de sistema
-  const chat = model.startChat({
-    // Define a instrução de sistema (system instruction)
-    systemInstruction: `Você é PhysicsGenius, um assistente especializado em física, projetado para explicar conceitos complexos de física de forma clara e precisa.
+Você deve ser capaz de:
+• Explicar conceitos de forma clara e acessível, adaptando a linguagem para diferentes níveis de conhecimento (ensino fundamental, médio, técnico ou universitário);
+• Resolver problemas passo a passo, com justificativas teóricas e matemáticas;
+• Criar exemplos e analogias que facilitem a compreensão;
+• Contextualizar historicamente os principais marcos da física e seus cientistas;
+• Sugerir experimentos práticos simples e avançados;
+• Relacionar a Física com outras áreas, como Química, Matemática, Engenharia e Filosofia da Ciência;
+• Atualizar-se com descobertas recentes e aplicações tecnológicas modernas.
 
-    ÁREAS DE ESPECIALIZAÇÃO:
-    - Mecânica Clássica (Leis de Newton, movimento, energia, etc.)
-    - Termodinâmica (leis da termodinâmica, entropia, ciclos, etc.)
-    - Eletromagnetismo (leis de Maxwell, circuitos, campos, etc.)
-    - Relatividade (especial e geral)
-    - Física Quântica (princípios fundamentais, modelos atômicos, etc.)
-    - Física de Partículas (modelo padrão, forças fundamentais)
-    - Astrofísica (estrelas, galáxias, cosmos)
-    
-    DIRETRIZES DE COMPORTAMENTO:
-    1. USE LINGUAGEM CLARA: Explique conceitos complexos em termos compreensíveis, definindo termos técnicos quando necessário.
-    2. INCLUA FÓRMULAS: Quando relevante, apresente as equações matemáticas em formato claro.
-    3. DÊ EXEMPLOS: Relacione conceitos físicos com fenômenos do cotidiano para facilitar a compreensão.
-    4. SEJA PRECISO: Garanta que todas as explicações e fórmulas estejam corretas cientificamente.
-    5. SEJA CONCISO: Forneça explicações completas, mas evite digressões desnecessárias.
-    6. SEJA NEUTRO: Apresente diferentes interpretações quando existirem (como na física quântica).
-    7. INDIQUE LIMITAÇÕES: Explique quando uma teoria tem limites de aplicabilidade.
-    
-    Para problemas que exigem cálculos, mostre o processo passo a passo. Se não souber uma resposta, admita claramente em vez de especular.`,
-    
-    history: [
-      {
-        role: "user",
-        parts: "Olá, você pode me ajudar com física?",
-      },
-      {
-        role: "model",
-        parts: "Olá! Sou o PhysicsGenius, seu assistente especializado em física. Posso explicar conceitos, fórmulas e ajudar com problemas de mecânica, termodinâmica, eletromagnetismo, relatividade e física quântica. O que você gostaria de aprender hoje?",
-      },
-    ],
-    generationConfig: {
-      stopSequences: [],
-      maxOutputTokens: 800,
-      temperature: 0.4,
-      topP: 0.95,
-      topK: 40,
-    },
-  });
+Aja com precisão, profundidade e didática. Você é um guia completo no universo da Física.
+`;
 
-  const result = await chat.sendMessage(prompt);
-  const response = await result.response;
-  console.log(response.text());
-  return response.text(); // Retornar o texto para uso na interface web
+let isWaitingForResponse = false;
+
+async function sendMessage(userInput) {
+    showTypingIndicator();
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const chat = model.startChat();
+
+    try {
+        const result = await chat.sendMessage(systemInstruction + "\nUsuário: " + userInput);
+        const text = await result.response.text();
+        removeTypingIndicator();
+        addMessageToUI(text, 'bot');
+    } catch (err) {
+        removeTypingIndicator();
+        addMessageToUI(`Erro: ${err.message}`, 'bot');
+        console.error(err);
+    }
+
+    isWaitingForResponse = false;
 }
 
-// Função para integrar com a interface HTML
-async function handleUserMessage(userMessage) {
-  try {
-    const response = await run(userMessage);
-    return response;
-  } catch (error) {
-    console.error("Erro ao processar mensagem:", error);
-    return "Desculpe, ocorreu um erro ao processar sua pergunta sobre física. Por favor, tente novamente.";
-  }
+function addMessageToUI(text, sender) {
+    const messageElement = document.createElement('div');
+    messageElement.classList.add('message');
+    messageElement.classList.add(sender === 'user' ? 'user-message' : 'bot-message');
+
+    let processedText = text;
+    if (sender === 'bot') {
+        processedText = processedText.split('\n\n').map(p => `<p>${p}</p>`).join('');
+    }
+
+    messageElement.innerHTML = `
+        <div class="message-header ${sender}">
+            <div class="avatar">${sender === 'user' ? 'Você' : 'PG'}</div>
+            <span>${sender === 'user' ? 'Você' : 'PhysicsGenius'}</span>
+        </div>
+        ${processedText}
+        <span class="message-time">${getCurrentTime()}</span>
+    `;
+
+    chatMessages.appendChild(messageElement);
+    scrollToBottom();
 }
 
-export { handleUserMessage };
+function showTypingIndicator() {
+    typingIndicator.style.display = 'block';
+    scrollToBottom();
+}
+
+function removeTypingIndicator() {
+    typingIndicator.style.display = 'none';
+}
+
+function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+function getCurrentTime() {
+    const now = new Date();
+    return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+}
+
+function handleUserMessage() {
+    if (isWaitingForResponse) return;
+
+    const userMessage = messageInput.value.trim();
+    if (!userMessage) return;
+
+    addMessageToUI(userMessage, 'user');
+    messageInput.value = '';
+    sendButton.disabled = true;
+    messageInput.focus();
+    isWaitingForResponse = true;
+    sendMessage(userMessage);
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', () => {
+    messageInput.addEventListener('input', () => {
+        sendButton.disabled = messageInput.value.trim().length === 0;
+    });
+
+    sendButton.addEventListener('click', handleUserMessage);
+
+    messageInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handleUserMessage();
+        }
+    });
+
+    // Inicializar o botão como desativado
+    sendButton.disabled = true;
+});

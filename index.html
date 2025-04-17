@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -275,8 +276,13 @@
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .typing-indicator {
@@ -299,19 +305,27 @@
         .typing-indicator span:nth-child(1) {
             animation-delay: 0s;
         }
-        
+
         .typing-indicator span:nth-child(2) {
             animation-delay: 0.2s;
         }
-        
+
         .typing-indicator span:nth-child(3) {
             animation-delay: 0.4s;
         }
 
         @keyframes ellipsis {
-            0% { opacity: 0; }
-            20% { opacity: 1; }
-            100% { opacity: 0; }
+            0% {
+                opacity: 0;
+            }
+
+            20% {
+                opacity: 1;
+            }
+
+            100% {
+                opacity: 0;
+            }
         }
 
         /* Estilo para fórmulas matemáticas e física */
@@ -329,7 +343,7 @@
             .container {
                 padding: 10px;
             }
-            
+
             .message {
                 max-width: 90%;
             }
@@ -338,8 +352,9 @@
                 padding: 10px;
             }
         }
-    </style>
+    </style>    
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -369,7 +384,9 @@
                         <div class="avatar">PG</div>
                         <span>PhysicsGenius</span>
                     </div>
-                    Olá! Sou o PhysicsGenius, seu assistente especializado em física. Posso explicar conceitos, fórmulas e ajudar com problemas de mecânica, termodinâmica, eletromagnetismo, relatividade e física quântica. O que você gostaria de aprender hoje?
+                    Olá! Sou o PhysicsGenius, seu assistente especializado em física. Posso explicar conceitos, fórmulas
+                    e ajudar com problemas de mecânica, termodinâmica, eletromagnetismo, relatividade e física quântica.
+                    O que você gostaria de aprender hoje?
                 </div>
             </div>
 
@@ -387,192 +404,7 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const chatMessages = document.getElementById('chat-messages');
-            const userInput = document.getElementById('user-input');
-            const sendButton = document.getElementById('send-button');
-            const loader = document.getElementById('loader');
-            const typingIndicator = document.getElementById('typing-indicator');
-            const topicChips = document.querySelectorAll('.topic-chip');
-
-            // Event listener para os chips de tópicos
-            topicChips.forEach(chip => {
-                chip.addEventListener('click', () => {
-                    const topic = chip.getAttribute('data-topic');
-                    let message = '';
-                    
-                    switch(topic) {
-                        case 'mecânica':
-                            message = "Explique as Leis de Newton";
-                            break;
-                        case 'termodinâmica':
-                            message = "Quais são as leis da termodinâmica?";
-                            break;
-                        case 'eletromagnetismo':
-                            message = "Explique as Equações de Maxwell";
-                            break;
-                        case 'relatividade':
-                            message = "Explique a Teoria da Relatividade de Einstein";
-                            break;
-                        case 'quântica':
-                            message = "O que é o princípio da incerteza de Heisenberg?";
-                            break;
-                    }
-                    
-                    userInput.value = message;
-                    handleSendMessage();
-                });
-            });
-
-            // Função para adicionar mensagens ao chat
-            function addMessage(text, isUser = false) {
-                const messageDiv = document.createElement('div');
-                messageDiv.className = isUser ? 'message user-message' : 'message bot-message';
-                
-                const messageHeader = document.createElement('div');
-                messageHeader.className = isUser ? 'message-header user' : 'message-header bot';
-                
-                const avatar = document.createElement('div');
-                avatar.className = 'avatar';
-                avatar.textContent = isUser ? 'EU' : 'PG';
-                
-                const name = document.createElement('span');
-                name.textContent = isUser ? 'Você' : 'PhysicsGenius';
-                
-                messageHeader.appendChild(avatar);
-                messageHeader.appendChild(name);
-                
-                messageDiv.appendChild(messageHeader);
-                
-                // Processar formatação de fórmulas
-                if (!isUser) {
-                    // Detecta padrões de fórmulas e os formata
-                    const processedText = processFormulas(text);
-                    messageDiv.innerHTML += processedText;
-                } else {
-                    messageDiv.appendChild(document.createTextNode(text));
-                }
-                
-                chatMessages.appendChild(messageDiv);
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-            }
-
-            // Função para processar e formatar fórmulas
-            function processFormulas(text) {
-                // Padrões comuns de equações de física para destacar
-                const formulas = [
-                    { regex: /E\s*=\s*mc²/g, formula: "E = mc²" },
-                    { regex: /F\s*=\s*ma/gi, formula: "F = ma" },
-                    { regex: /PV\s*=\s*nRT/gi, formula: "PV = nRT" },
-                    { regex: /E\s*=\s*hf/gi, formula: "E = hf" },
-                    { regex: /F\s*=\s*G\s*\(\s*m1\s*m2\s*\/\s*r²\s*\)/gi, formula: "F = G(m₁m₂/r²)" },
-                    { regex: /E\s*=\s*\(1\/2\)\s*mv²/gi, formula: "E = (1/2)mv²" },
-                    { regex: /ΔS\s*≥\s*0/gi, formula: "ΔS ≥ 0" },
-                    { regex: /p\s*=\s*mv/gi, formula: "p = mv" },
-                    { regex: /ΔxΔp\s*≥\s*ħ\/2/gi, formula: "ΔxΔp ≥ ħ/2" }
-                ];
-
-                let processedText = text;
-                
-                // Substitui os padrões encontrados com tags formatadas
-                formulas.forEach(f => {
-                    processedText = processedText.replace(f.regex, `<div class="physics-formula">${f.formula}</div>`);
-                });
-                
-                return processedText;
-            }
-
-            // Simular processamento da API
-            async function processMensagem(mensagem) {
-                // Aqui você integraria com o código da API do Gemini
-                // Por enquanto, vamos simular uma resposta após um atraso
-                
-                return new Promise((resolve) => {
-                    // Simulando o tempo de processamento
-                    setTimeout(() => {
-                        // Respostas de física baseadas em perguntas comuns
-                        const respostas = {
-                            "explique as leis de newton": `As três leis de Newton são princípios fundamentais da física clássica:\n\n1. Primeira Lei (Inércia): Um corpo permanece em repouso ou em movimento retilíneo uniforme, a menos que uma força resultante não-nula atue sobre ele. Isto é representado pela equação F = 0 quando não há aceleração.\n\n2. Segunda Lei: A força resultante sobre um corpo é igual à taxa de variação do seu momento linear. Na forma mais conhecida, F = ma, onde F é a força aplicada, m é a massa do corpo e a é a aceleração produzida.\n\n3. Terceira Lei: Para cada ação há uma reação igual e oposta. Se um corpo A exerce uma força em um corpo B, então B exerce uma força de mesma intensidade em A, mas em sentido contrário.`,
-                            
-                            "quais são as leis da termodinâmica": `As leis da termodinâmica são princípios fundamentais que governam o comportamento da energia térmica:\n\n1. Lei Zero: Se dois sistemas estão em equilíbrio térmico com um terceiro sistema, então eles estão em equilíbrio térmico entre si.\n\n2. Primeira Lei (Conservação de Energia): A energia do universo é constante; ela não pode ser criada nem destruída, apenas transformada. Matematicamente: ΔU = Q - W, onde ΔU é a variação da energia interna, Q é o calor trocado e W é o trabalho realizado.\n\n3. Segunda Lei: A entropia total de um sistema isolado nunca diminui espontaneamente. Todo processo espontâneo leva a um aumento da entropia total. ΔS ≥ 0 para sistemas isolados.\n\n4. Terceira Lei: À medida que a temperatura de um sistema se aproxima do zero absoluto, sua entropia se aproxima de um valor constante, geralmente zero para um cristal perfeito.`,
-                            
-                            "explique as equações de maxwell": `As equações de Maxwell são quatro equações fundamentais que descrevem completamente o eletromagnetismo clássico:\n\n1. Lei de Gauss para Eletricidade: ∇·E = ρ/ε₀\nO fluxo do campo elétrico através de uma superfície fechada é proporcional à carga elétrica dentro dela.\n\n2. Lei de Gauss para Magnetismo: ∇·B = 0\nO fluxo magnético total através de qualquer superfície fechada é sempre zero, indicando a inexistência de monopolos magnéticos.\n\n3. Lei de Faraday: ∇×E = -∂B/∂t\nA variação do campo magnético produz um campo elétrico circular.\n\n4. Lei de Ampère-Maxwell: ∇×B = μ₀J + μ₀ε₀∂E/∂t\nCorrentes elétricas e campos elétricos variantes produzem campos magnéticos.`,
-                            
-                            "explique a teoria da relatividade de einstein": `A Teoria da Relatividade de Einstein revolucionou nossa compreensão do espaço, tempo e gravitação:\n\n1. Relatividade Especial (1905):\n- O tempo e o espaço não são absolutos mas relativos ao observador\n- A velocidade da luz (c) é constante em todos os referenciais inerciais\n- Dilatação do tempo: t = t₀/√(1-v²/c²)\n- Contração do espaço: L = L₀√(1-v²/c²)\n- Equivalência massa-energia: E = mc²\n\n2. Relatividade Geral (1915):\n- A gravidade não é uma força, mas uma curvatura no espaço-tempo causada pela massa/energia\n- Os corpos seguem geodésicas no espaço-tempo curvo\n- Os efeitos gravitacionais se propagam na velocidade da luz\n- Prevê fenômenos como a curvatura da luz, ondas gravitacionais e buracos negros`,
-                            
-                            "o que é o princípio da incerteza de heisenberg": `O Princípio da Incerteza de Heisenberg é um dos conceitos fundamentais da mecânica quântica. Formulado por Werner Heisenberg em 1927, ele estabelece que:\n\nExiste um limite fundamental na precisão com que podemos conhecer simultaneamente certas propriedades complementares de uma partícula, como posição e momento. Matematicamente, é expresso como:\n\nΔxΔp ≥ ħ/2\n\nOnde Δx é a incerteza na posição, Δp é a incerteza no momento linear, e ħ é a constante de Planck reduzida (h/2π).\n\nIsso significa que quanto mais precisamente determinamos a posição de uma partícula, menos podemos saber sobre seu momento (e vice-versa). Esta não é uma limitação de nossos instrumentos, mas uma característica fundamental da natureza quântica da realidade.`
-                        };
-
-                        // Verificar se há uma resposta específica
-                        let resposta = "Não tenho uma resposta específica para essa pergunta sobre física. Poderia reformular ou escolher um dos tópicos sugeridos?";
-                        
-                        // Verificar palavras-chave na mensagem
-                        const mensagemLower = mensagem.toLowerCase();
-                        for (const [chave, valor] of Object.entries(respostas)) {
-                            if (mensagemLower.includes(chave)) {
-                                resposta = valor;
-                                break;
-                            }
-                        }
-
-                        // Para perguntas genéricas sobre física
-                        if (mensagemLower.includes("o que é física")) {
-                            resposta = "A Física é a ciência natural que estuda a matéria, energia e suas interações. Ela busca descrever e explicar os fenômenos naturais, desde as partículas subatômicas até a estrutura do universo, através de leis e princípios matemáticos. A física se divide em várias áreas como mecânica, termodinâmica, eletromagnetismo, óptica, física nuclear, relatividade e mecânica quântica.";
-                        }
-
-                        resolve(resposta);
-                    }, 1500);
-                });
-            }
-
-            // Função para processar o envio da mensagem
-            async function handleSendMessage() {
-                const userMessage = userInput.value.trim();
-                if (!userMessage) return;
-
-                // Adiciona mensagem do usuário ao chat
-                addMessage(userMessage, true);
-                userInput.value = '';
-
-                // Mostra indicador de digitação
-                typingIndicator.style.display = 'block';
-                sendButton.disabled = true;
-                loader.style.display = 'block';
-                sendButton.querySelector('span').style.display = 'none';
-
-                try {
-                    // Processar a mensagem (simulando a API do Gemini)
-                    const botResponse = await processMensagem(userMessage);
-                    
-                    // Esconde indicador de digitação
-                    typingIndicator.style.display = 'none';
-                    
-                    // Adiciona resposta do bot ao chat
-                    addMessage(botResponse);
-                } catch (error) {
-                    // Em caso de erro
-                    addMessage("Desculpe, ocorreu um erro ao processar sua pergunta sobre física. Por favor, tente novamente.");
-                    console.error("Erro:", error);
-                } finally {
-                    // Restaura o botão
-                    sendButton.disabled = false;
-                    loader.style.display = 'none';
-                    sendButton.querySelector('span').style.display = 'block';
-                }
-            }
-
-            // Event listeners
-            sendButton.addEventListener('click', handleSendMessage);
-            userInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    handleSendMessage();
-                }
-            });
-
-            // Foca no input ao carregar a página
-            userInput.focus();
-        });
-    </script>
+    <script type="module" src="index.js"></script>
 </body>
+
 </html>
