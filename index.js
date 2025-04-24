@@ -7,7 +7,6 @@ const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
 // Configuração da API
-const API_KEY = "AIzaSyCq6BRjupNXHgvC0OK5i_hYj-_3rQ796XQ";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Instrução do sistema
@@ -23,21 +22,50 @@ Você deve ser capaz de:
 • Relacionar a Física com outras áreas, como Química, Matemática, Engenharia e Filosofia da Ciência;
 • Atualizar-se com descobertas recentes e aplicações tecnológicas modernas.
 
-Aja com precisão, profundidade e didática. Você é um guia completo no universo da Física.
+Aja com precisão, profundidade e didática. Você é um guia completo no universo da Física.
 `;
 
+// Armazenamento do histórico de mensagens
+let chatHistory = [];
 let isWaitingForResponse = false;
 
 async function sendMessage(userInput) {
     showTypingIndicator();
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const chat = model.startChat();
+    
+    // Inicializa o chat com o histórico existente
+    const chat = model.startChat({
+        history: chatHistory,
+        generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+        }
+    });
 
     try {
+        // Adiciona a mensagem do usuário ao histórico
+        chatHistory.push({
+            role: "user",
+            parts: [{ text: userInput }]
+        });
+        
+        // Envia a mensagem para a API com o sistema de instrução
         const result = await chat.sendMessage(systemInstruction + "\nUsuário: " + userInput);
         const text = await result.response.text();
+        
+        // Adiciona a resposta do modelo ao histórico
+        chatHistory.push({
+            role: "model",
+            parts: [{ text: text }]
+        });
+        
         removeTypingIndicator();
         addMessageToUI(text, 'bot');
+        
+        // Log do histórico para depuração (pode ser removido em produção)
+        console.log("Histórico atual:", chatHistory);
     } catch (err) {
         removeTypingIndicator();
         addMessageToUI(`Erro: ${err.message}`, 'bot');
@@ -100,6 +128,12 @@ function handleUserMessage() {
     messageInput.focus();
     isWaitingForResponse = true;
     sendMessage(userMessage);
+}
+
+// Função para limpar o histórico (opcional - pode ser adicionada a um botão na UI)
+function clearHistory() {
+    chatHistory = [];
+    console.log("Histórico limpo");
 }
 
 // Event listeners
