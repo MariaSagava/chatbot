@@ -1,13 +1,17 @@
 import { GoogleGenerativeAI } from "https://esm.run/@google/generative-ai";
 
-// Elementos do DOM (ajustados para bater com o HTML)
+// Elementos do DOM
 const chatMessages = document.getElementById("chat-messages");
 const messageInput = document.getElementById("user-input");
 const sendButton = document.getElementById("send-button");
 const typingIndicator = document.getElementById("typing-indicator");
 
-// Configuração da API
+// Configuração da API - Supõe que API_KEY e OPENWEATHER_API_KEY estão definidos em config.js
 const genAI = new GoogleGenerativeAI(API_KEY);
+
+// Armazenamento do histórico de mensagens
+let chatHistory = [];
+let isWaitingForResponse = false;
 
 // Instrução do sistema
 const systemInstruction = `
@@ -29,17 +33,7 @@ Além disso, você pode usar ferramentas especiais:
 Utilize essas ferramentas sempre que necessário para responder de forma precisa às perguntas do usuário, especialmente quando se tratarem de informações em tempo real como data, hora ou clima.
 
 Aja com precisão, profundidade e didática. Você é um guia completo no universo da Física.
-A data atual é ${getCurrentTime()}, utilize em caso de precisão
 `;
-
-function getCurrentTime() {
-    const date = Date()
-    return date
-}
-
-// Armazenamento do histórico de mensagens
-let chatHistory = [];
-let isWaitingForResponse = false;
 
 // Definição das ferramentas que o modelo pode usar
 const tools = [
@@ -48,8 +42,8 @@ const tools = [
       {
         name: "getCurrentTime",
         description: "Obtém a data e hora atuais, incluindo dia da semana, dia do mês, mês, ano e horário. Use quando o usuário perguntar que dia é hoje, que horas são, qual a data atual ou perguntas similares sobre data e hora.",
-        parameters: { 
-          type: "object", 
+        parameters: {
+          type: "object",
           properties: {} // Sem parâmetros necessários
         }
       },
@@ -71,18 +65,44 @@ const tools = [
   }
 ];
 
-// Implementação das funções
+// Mapeamento de funções (relaciona os nomes das funções com as implementações reais)
+const availableFunctions = {
+  getCurrentTime: getCurrentTime,
+  getWeather: getWeather
+};
 
+// Implementação das funções
+function getCurrentTime() {
+  console.log("Executando getCurrentTime");
+  const now = new Date();
+
+  // Formatação mais detalhada da data e hora
+  const options = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZoneName: 'short'
+  };
+
+  return {
+    currentTime: now.toLocaleString(),
+    formattedDateTime: now.toLocaleDateString('pt-BR', options)
+  };
+}
 
 async function getWeather(args) {
   console.log("Executando getWeather com args:", args);
   const location = args.location;
-  
+
   // Verificar se temos a API key para OpenWeather
-  // Nota: Esta chave deve estar definida no arquivo config.js
-  const apiKey = OPENWEATHER_API_KEY; 
+  const apiKey = OPENWEATHER_API_KEY;
   if (!apiKey) {
-    return { 
+    console.warn("Chave da API OpenWeatherMap não configurada. Usando dados simulados.");
+    return {
       error: "Chave da API OpenWeatherMap não configurada. Este é apenas um exemplo simulado.",
       simulatedData: {
         location: location,
@@ -91,12 +111,12 @@ async function getWeather(args) {
       }
     };
   }
-  
+
   try {
     const url = `https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=${apiKey}&units=metric&lang=pt_br`;
     const response = await fetch(url);
     const data = await response.json();
-    
+
     if (response.ok) {
       return {
         location: data.name,
@@ -108,68 +128,73 @@ async function getWeather(args) {
         wind: data.wind.speed
       };
     } else {
-      return { 
+      console.error("Erro ao obter dados meteorológicos:", data);
+      return {
         error: data.message || "Erro ao obter dados meteorológicos",
         errorCode: data.cod
       };
     }
   } catch (error) {
     console.error("Erro ao chamar OpenWeatherMap:", error);
-    return { 
+    return {
       error: "Não foi possível conectar ao serviço de previsão do tempo."
     };
   }
 }
 
+// Processa todas as chamadas de ferramentas e retorna os resultados
 async function processToolCalls(toolCalls) {
-  // Processa todas as chamadas de ferramentas e retorna os resultados
   const toolResults = [];
-  
+
   for (const toolCall of toolCalls) {
     const functionCall = toolCall.functionCall;
     const functionName = functionCall.name;
-    
+
     console.log(`Processando chamada de ferramenta: ${functionName}`);
-    
+
     try {
       let args = {};
       if (functionCall.args) {
-        args = JSON.parse(functionCall.args);
+        args = typeof functionCall.args === 'string'
+          ? JSON.parse(functionCall.args)
+          : functionCall.args;
       }
-      
-      let result;
-      if (functionName === "getCurrentTime") {
-        result = getCurrentTime();
-      } else if (functionName === "getWeather") {
-        result = await getWeather(args);
-      } else {
-        result = { error: `Função desconhecida: ${functionName}` };
+
+      // Verifica se a função existe
+      if (!availableFunctions[functionName]) {
+        throw new Error(`Função desconhecida: ${functionName}`);
       }
-      
+
+      // Executa a função apropriada
+      const result = await availableFunctions[functionName](args);
+
       toolResults.push({
         toolCallId: toolCall.id,
-        output: JSON.stringify(result)
-      });
-      
+        functionName: functionName,
+        output: result // <-- sem JSON.stringify
+      }); 
+
     } catch (error) {
       console.error(`Erro ao executar ${functionName}:`, error);
       toolResults.push({
         toolCallId: toolCall.id,
-        output: JSON.stringify({ error: error.message })
+        functionName: functionName,
+        output: result // <-- sem JSON.stringify
       });
     }
   }
-  
+
   return toolResults;
 }
 
+// Função principal para enviar mensagem
 async function sendMessage(userInput) {
   showTypingIndicator();
-  const model = genAI.getGenerativeModel({ 
+  const model = genAI.getGenerativeModel({
     model: "gemini-1.5-flash", // Ou use "gemini-pro" se 1.5-flash não estiver disponível
     tools: tools // Passa as ferramentas para o modelo
   });
-  
+
   // Inicializa o chat com o histórico existente
   const chat = model.startChat({
     history: chatHistory,
@@ -187,57 +212,86 @@ async function sendMessage(userInput) {
       role: "user",
       parts: [{ text: userInput }]
     });
-    
-    // Envia a mensagem para a API com o sistema de instrução
-    let response = await chat.sendMessage(systemInstruction + "\nUsuário: " + userInput);
+
+    // Envia a mensagem para a API
+    let response = await chat.sendMessage(userInput);
     let result = await response.response;
-    
+
     // Verifica se há chamadas de ferramentas (function calls)
-    if (result.candidates[0].content.parts[0].functionCall || 
-        (result.candidates[0].content.parts[0].toolCalls && 
-         result.candidates[0].content.parts[0].toolCalls.length > 0)) {
+    if (result.candidates && 
+        result.candidates[0].content && 
+        result.candidates[0].content.parts && 
+        result.candidates[0].content.parts.length > 0) {
       
-      console.log("Solicitação de ferramenta detectada");
+      const firstPart = result.candidates[0].content.parts[0];
       
-      // Extrai as chamadas de ferramentas
-      const toolCalls = result.candidates[0].content.parts[0].toolCalls || 
-                        [{ id: "1", functionCall: result.candidates[0].content.parts[0].functionCall }];
-      
-      // Executa as ferramentas solicitadas
-      const toolResults = await processToolCalls(toolCalls);
-      
-      // Envia os resultados de volta para o modelo
-      response = await chat.sendMessage({
-        role: "function",
-        parts: [{ toolResults: toolResults }]
-      });
-      
-      result = await response.response;
+      if (firstPart.functionCall || 
+         (firstPart.toolCalls && firstPart.toolCalls.length > 0)) {
+        
+        console.log("Solicitação de ferramenta detectada");
+
+        // Extrai as chamadas de ferramentas
+        const toolCalls = firstPart.toolCalls || 
+          [{ id: "1", functionCall: firstPart.functionCall }];
+
+        // Executa as ferramentas solicitadas
+        const toolResults = await processToolCalls(toolCalls);
+        console.log("Resultados das ferramentas:", toolResults);
+
+        // Prepara as respostas das funções para enviar de volta
+        const functionResponses = toolResults.map(tr => {
+          return {
+            functionResponse: {
+              name: tr.functionName,
+              response: tr.output // Já deve ser uma string JSON
+            }
+          };
+        });
+
+        // Envia os resultados de volta para o modelo
+        try {
+          response = await chat.sendMessage(functionResponses);
+          result = await response.response;
+        } catch (functionError) {
+          console.error("Erro ao enviar resultados das funções:", functionError);
+          // Tentativa alternativa com formato diferente
+          const alternativeMessage = { 
+            role: "function",
+            parts: functionResponses
+          };
+          console.log("Tentando formato alternativo:", JSON.stringify(alternativeMessage));
+          response = await chat.sendMessage(alternativeMessage);
+          result = await response.response;
+        }
+      }
     }
-    
-    const text = result.text();
-    
+
+    // Extrai o texto da resposta
+    const text = result.candidates?.[0]?.content?.parts?.map(p => p.text).join('\n') || "Sem resposta gerada.";
+
     // Adiciona a resposta do modelo ao histórico
     chatHistory.push({
       role: "model",
       parts: [{ text: text }]
     });
-    
+
     removeTypingIndicator();
     addMessageToUI(text, 'bot');
-    
+
     // Log do histórico para depuração (pode ser removido em produção)
     console.log("Histórico atual:", chatHistory);
-    
-  } catch (err) {
+
+  }
+  catch (err) {
     removeTypingIndicator();
     addMessageToUI(`Erro: ${err.message}`, 'bot');
-    console.error(err);
+    console.error("Erro ao processar mensagem:", err);
   }
 
   isWaitingForResponse = false;
+  sendButton.disabled = false;
 }
-
+// Funções de UI
 function addMessageToUI(text, sender) {
   const messageElement = document.createElement('div');
   messageElement.classList.add('message');
@@ -247,7 +301,7 @@ function addMessageToUI(text, sender) {
   if (sender === 'bot') {
     // Processa quebras de linha para parágrafos HTML
     processedText = processedText.split('\n\n').map(p => `<p>${p}</p>`).join('');
-    
+
     // Identificar e estilizar fórmulas (textos entre $ ou $$)
     processedText = processedText.replace(/\$\$(.*?)\$\$/g, '<div class="physics-formula">$1</div>');
     processedText = processedText.replace(/\$(.*?)\$/g, '<span class="formula">$1</span>');
@@ -301,6 +355,7 @@ function handleUserMessage() {
 // Função para limpar o histórico (opcional - pode ser adicionada a um botão na UI)
 function clearHistory() {
   chatHistory = [];
+  chatMessages.innerHTML = '';
   console.log("Histórico limpo");
 }
 
@@ -330,4 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Inicializar o botão como desativado
   sendButton.disabled = true;
+
+  // Mensagem de boas-vindas (opcional)
+  addMessageToUI("Olá! Sou o PhysicsGenius, seu assistente especialista em Física. Como posso ajudar você hoje? Você pode me perguntar sobre qualquer conceito de física, solicitar a solução de problemas, ou até mesmo perguntar sobre o clima ou a hora atual!", 'bot');
 });
