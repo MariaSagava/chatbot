@@ -92,6 +92,6 @@ app.post('/api/chat', async (req, res) => {
 });
 
 // Iniciar o servidor
-app.listen("https://chatbot-p98m.onrender.com", () => {
+app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });
