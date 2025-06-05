@@ -7,12 +7,12 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware para servir arquivos estáticos
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname)));
 app.use(express.json());
 
 // Rota para servir o arquivo HTML principal
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Rota para obter dados meteorológicos
