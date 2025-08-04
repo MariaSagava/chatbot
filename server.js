@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 
 // --- Configuração das Conexões com Múltiplos MongoDB Atlas ---
 const MONGO_URI_LOGS = process.env.MONGO_URI || "mongodb+srv://user_log_acess:Log4c3ss2025@cluster0.nbt3sks.mongodb.net/IIW2023A_Logs?retryWrites=true&w=majority&appName=Cluster0";
-const MONGO_URI_HISTORIA = process.env.MONGO_URI_HISTORIA || "mongodb+srv://mariaed:mariaissa130308@chatbot.cocduuo.mongodb.net/";
+const MONGO_URI_HISTORIA = process.env.MONGO_URI_HISTORIA || "mongodb+srv://mariaed:mariaissa130308@chatbot.cocduuo.mongodb.net/?retryWrites=true&w=majority&appName=chatbot";
 
 let dbLogs;
 let dbHistoria;

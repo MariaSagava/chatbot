@@ -120,11 +120,24 @@
 
         .message {
             max-width: 80%;
-            padding: 12px 16px;
+            /* padding: 12px 16px; */ /* Removido para controle pelo content/header */
             border-radius: 18px;
             position: relative;
             line-height: 1.5;
         }
+        
+        /* Ajuste para que o padding esteja nos filhos */
+        .message-header, .message-content {
+            padding: 5px 16px;
+        }
+        .message-header {
+            padding-top: 12px;
+            padding-bottom: 0;
+        }
+        .message-content {
+            padding-bottom: 12px;
+        }
+
 
         .user-message {
             background-color: var(--user-message-bg);
@@ -184,11 +197,11 @@
             font-weight: bold;
         }
 
-        .user .avatar {
+        .user-message .message-header .avatar {
             background-color: var(--primary-color);
         }
 
-        .bot .avatar {
+        .bot-message .message-header .avatar {
             background-color: var(--secondary-color);
         }
 
@@ -233,6 +246,12 @@
         #send-button:hover {
             background-color: #2a4db8;
         }
+        
+        #send-button:disabled {
+            background-color: #9eadc3;
+            cursor: not-allowed;
+        }
+
 
         #send-button:active {
             transform: scale(0.98);
@@ -328,7 +347,6 @@
             }
         }
 
-        /* Estilo para fórmulas matemáticas e física */
         .physics-formula {
             padding: 10px;
             background-color: #f8f9fa;
@@ -338,6 +356,126 @@
             font-family: 'Times New Roman', Times, serif;
             font-style: italic;
         }
+
+        /* --- NOVOS ESTILOS PARA O HISTÓRICO DE CONVERSAS --- */
+        .history-controls {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        #load-history-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            background-color: #5a67d8;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+
+        #load-history-button:hover {
+            background-color: #434190;
+        }
+
+        #historico-container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f7fafc;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+        }
+        
+        #historico-container h2 {
+            text-align: center;
+            color: #2d3748;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .history-content {
+            display: flex;
+            flex-wrap: wrap; 
+            gap: 20px;
+            max-height: 70vh;
+        }
+
+        #lista-sessoes {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            flex: 1;
+            min-width: 250px; 
+            overflow-y: auto; 
+            border-right: 1px solid #cbd5e0;
+            padding-right: 15px;
+        }
+
+        .sessao-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background-color: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .sessao-item:hover {
+            background-color: #edf2f7;
+            border-color: #a0aec0;
+        }
+
+        #visualizacao-conversa-detalhada {
+            flex: 2;
+            min-width: 300px;
+            background-color: #fff;
+            border-radius: 6px;
+            padding: 10px;
+            overflow-y: auto;
+            display: none; /* Começa escondido */
+            border: 1px solid #cbd5e0;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+        }
+        
+        #visualizacao-conversa-detalhada h3 {
+            position: sticky;
+            top: -10px; 
+            background: white;
+            padding: 10px;
+            margin: -10px -10px 10px -10px;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 1rem;
+        }
+
+        #close-history-view {
+            background: #e2e8f0;
+            border: 1px solid #cbd5e0;
+            border-radius: 50%;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            font-weight: bold;
+            color: #4a5568;
+            transition: background-color 0.2s;
+        }
+
+        #close-history-view:hover {
+            background-color: #cbd5e0;
+        }
+        
+        #visualizacao-conversa-detalhada .message {
+            margin-bottom: 15px;
+        }
+        /* --- FIM DOS NOVOS ESTILOS --- */
+
 
         @media (max-width: 768px) {
             .container {
@@ -350,6 +488,17 @@
 
             .topic-chips {
                 padding: 10px;
+            }
+
+            .history-content {
+                flex-direction: column;
+            }
+            #lista-sessoes {
+                border-right: none;
+                border-bottom: 1px solid #cbd5e0;
+                padding-right: 0;
+                padding-bottom: 15px;
+                max-height: 30vh;
             }
         }
     </style>    
@@ -364,39 +513,61 @@
             </div>
         </header>
 
-        <div class="chat-container">
-            <div class="chat-header">
-                <span class="icon">🔭</span>
-                <span>Assistente de Física</span>
-            </div>
+        <main>
+            <div class="chat-container">
+                <div class="chat-header">
+                    <span class="icon">🔭</span>
+                    <span>Assistente de Física</span>
+                </div>
 
-            <div class="topic-chips">
-                <div class="topic-chip" data-topic="mecânica">Mecânica</div>
-                <div class="topic-chip" data-topic="termodinâmica">Termodinâmica</div>
-                <div class="topic-chip" data-topic="eletromagnetismo">Eletromagnetismo</div>
-                <div class="topic-chip" data-topic="relatividade">Relatividade</div>
-                <div class="topic-chip" data-topic="quântica">Física Quântica</div>
-            </div>
+                <div class="topic-chips">
+                    <div class="topic-chip" data-topic="mecânica">Mecânica</div>
+                    <div class="topic-chip" data-topic="termodinâmica">Termodinâmica</div>
+                    <div class="topic-chip" data-topic="eletromagnetismo">Eletromagnetismo</div>
+                    <div class="topic-chip" data-topic="relatividade">Relatividade</div>
+                    <div class="topic-chip" data-topic="quântica">Física Quântica</div>
+                </div>
 
-            <div class="chat-messages" id="chat-messages">
-                
-            </div>
+                <div class="chat-messages" id="chat-messages">
+                    
+                </div>
 
-            <div class="typing-indicator" id="typing-indicator">
-                PhysicsGenius está digitando<span>.</span><span>.</span><span>.</span>
-            </div>
+                <div class="typing-indicator" id="typing-indicator">
+                    PhysicsGenius está digitando<span>.</span><span>.</span><span>.</span>
+                </div>
 
-            <div class="input-container">
-                <input type="text" id="user-input" placeholder="Pergunte algo sobre física..." autofocus>
-                <button id="send-button">
-                    <span>Enviar</span>
-                    <div class="loader" id="loader"></div>
-                </button>
+                <div class="input-container">
+                    <input type="text" id="user-input" placeholder="Pergunte algo sobre física..." autofocus>
+                    <button id="send-button">
+                        <span>Enviar</span>
+                        <div class="loader" id="loader"></div>
+                    </button>
+                </div>
             </div>
-        </div>
+            
+            <!-- SEÇÃO DE HISTÓRICO DE CONVERSAS (NOVO) -->
+            <div class="history-controls">
+                <button id="load-history-button">Ver/Ocultar Histórico de Conversas</button>
+            </div>
+    
+            <section id="historico-container" style="display: none;">
+                <h2>Histórico de Conversas Recentes</h2>
+                <div class="history-content">
+                    <ul id="lista-sessoes">
+                        <!-- A lista de sessões será populada aqui via JS -->
+                    </ul>
+                    <div id="visualizacao-conversa-detalhada">
+                        <!-- O conteúdo de uma conversa selecionada aparecerá aqui -->
+                    </div>
+                </div>
+            </section>
+            <!-- FIM DA SEÇÃO DE HISTÓRICO -->
+
+        </main>
     </div>
     <script src="config.js"></script>
     <script type="module" src="index.js"></script>
+    <!-- NOVO SCRIPT PARA O HISTÓRICO -->
+    <script type="module" src="sessaochat.js"></script>
 </body>
-
 </html>
