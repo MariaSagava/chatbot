@@ -32,9 +32,9 @@ async function connectToMongoDB(uri, dbName) {
 
 async function initializeDatabases() {
     console.log("Iniciando conexões com os bancos de dados...");
-    dbLogs = await connectToMongoDB(MONGO_URI_LOGS, "IIW2023A_Logs");
     dbHistoria = await connectToMongoDB(MONGO_URI_HISTORIA, "chatbotHistoriaDB");
-
+    dbLogs = await connectToMongoDB(MONGO_URI_LOGS, "IIW2023A_Logs");
+   
     if (!dbLogs || !dbHistoria) {
         console.warn("⚠️ Atenção: Uma ou mais conexões com o banco de dados falharam. A aplicação pode funcionar de forma limitada.");
     } else {
