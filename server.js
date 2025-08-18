@@ -42,7 +42,6 @@ async function initializeDatabases() {
     }
 }
 
-
 // --- Simulação de Armazenamento para Ranking (Mantido) ---
 let dadosRankingVitrine = [];
 
@@ -85,17 +84,14 @@ app.post('/api/log-connection', async (req, res) => {
   }
 });
 
-// NOVO ENDPOINT: Rota para salvar o histórico do chat (Usa dbHistoria)
+// ENDPOINT POST: Rota para salvar o histórico do chat (Usa dbHistoria)
 app.post('/api/chat/salvar-historico', async (req, res) => {
-
     const { sessionId, botId, startTime, endTime, messages } = req.body;
 
     if (!dbHistoria) {
         return res.status(503).json({ error: "Servidor não conectado ao banco de dados de histórico." });
     }
     try {
-        
-
         if (!sessionId || !botId || !messages || !Array.isArray(messages) || messages.length === 0) {
             return res.status(400).json({ error: "Dados incompletos para salvar histórico." });
         }
@@ -128,9 +124,92 @@ app.post('/api/chat/salvar-historico', async (req, res) => {
     }
 });
 
+// NOVO ENDPOINT GET: Rota para visualizar o histórico das sessões de chat
+app.get('/api/chat/historico', async (req, res) => {
+    if (!dbHistoria) {
+        return res.status(503).json({ error: "Servidor não conectado ao banco de dados de histórico." });
+    }
+
+    try {
+        const { sessionId, botId, limit = 50, page = 1 } = req.query;
+        
+        const collection = dbHistoria.collection("sessoesChat");
+        let query = {};
+        
+        // Filtros opcionais
+        if (sessionId) query.sessionId = sessionId;
+        if (botId) query.botId = botId;
+        
+        // Calculando paginação
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Busca no banco com paginação e ordenação por data mais recente
+        const historico = await collection
+            .find(query)
+            .sort({ lastUpdated: -1 })
+            .skip(skip)
+            .limit(parseInt(limit))
+            .toArray();
+
+        // Contar total de documentos para informações de paginação
+        const totalSessoes = await collection.countDocuments(query);
+        const totalPaginas = Math.ceil(totalSessoes / parseInt(limit));
+
+        console.log(`[Servidor] Histórico consultado - ${historico.length} sessões encontradas`);
+        
+        res.status(200).json({
+            success: true,
+            data: historico,
+            pagination: {
+                currentPage: parseInt(page),
+                totalPages,
+                totalSessoes,
+                hasNext: parseInt(page) < totalPaginas,
+                hasPrev: parseInt(page) > 1
+            }
+        });
+
+    } catch (error) {
+        console.error("[Servidor] Erro em /api/chat/historico:", error.message);
+        res.status(500).json({ error: "Erro interno ao buscar histórico de chat." });
+    }
+});
+
+// ENDPOINT GET: Buscar uma sessão específica por sessionId
+app.get('/api/chat/historico/:sessionId', async (req, res) => {
+    if (!dbHistoria) {
+        return res.status(503).json({ error: "Servidor não conectado ao banco de dados de histórico." });
+    }
+
+    try {
+        const { sessionId } = req.params;
+        
+        if (!sessionId) {
+            return res.status(400).json({ error: "SessionId é obrigatório." });
+        }
+
+        const collection = dbHistoria.collection("sessoesChat");
+        const sessao = await collection.findOne({ sessionId });
+
+        if (!sessao) {
+            return res.status(404).json({ error: "Sessão não encontrada." });
+        }
+
+        console.log(`[Servidor] Sessão específica encontrada: ${sessionId}`);
+        
+        res.status(200).json({
+            success: true,
+            data: sessao
+        });
+
+    } catch (error) {
+        console.error("[Servidor] Erro em /api/chat/historico/:sessionId:", error.message);
+        res.status(500).json({ error: "Erro interno ao buscar sessão específica." });
+    }
+});
 
 // Rotas de Ranking e Outras (Mantidas como antes)
-app.post('/api/ranking/registrar-acesso-bot', (req, res) => { /* ... código mantido ... */ 
+app.post('/api/ranking/registrar-acesso-bot', (req, res) => {
     const { botId, nomeBot } = req.body;
     if (!botId || !nomeBot) {
         return res.status(400).json({ error: "ID e Nome do Bot são obrigatórios." });
@@ -146,11 +225,13 @@ app.post('/api/ranking/registrar-acesso-bot', (req, res) => { /* ... código man
     console.log('[Servidor] Dados de ranking atualizados:', dadosRankingVitrine);
     res.status(201).json({ message: `Acesso ao bot ${nomeBot} registrado.` });
 });
-app.get('/api/ranking/visualizar', (req, res) => { /* ... código mantido ... */
+
+app.get('/api/ranking/visualizar', (req, res) => {
     const rankingOrdenado = [...dadosRankingVitrine].sort((a, b) => b.contagem - a.contagem);
     res.json(rankingOrdenado);
 });
-app.post('/api/weather', async (req, res) => { /* ... código mantido ... */
+
+app.post('/api/weather', async (req, res) => {
   try {
     const { location } = req.body;
     const apiKey = process.env.OPENWEATHER_API_KEY;
