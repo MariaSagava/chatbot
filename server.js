@@ -37,6 +37,8 @@ async function initializeDatabases() {
 
     if (!dbLogs || !dbHistoria) {
         console.warn("⚠️ Atenção: Uma ou mais conexões com o banco de dados falharam. A aplicação pode funcionar de forma limitada.");
+    } else {
+        console.warn("conexões realizadas com sucesso");
     }
 }
 
@@ -85,11 +87,14 @@ app.post('/api/log-connection', async (req, res) => {
 
 // NOVO ENDPOINT: Rota para salvar o histórico do chat (Usa dbHistoria)
 app.post('/api/chat/salvar-historico', async (req, res) => {
+
+    const { sessionId, botId, startTime, endTime, messages } = req.body;
+
     if (!dbHistoria) {
         return res.status(503).json({ error: "Servidor não conectado ao banco de dados de histórico." });
     }
     try {
-        const { sessionId, botId, startTime, endTime, messages } = req.body;
+        
 
         if (!sessionId || !botId || !messages || !Array.isArray(messages) || messages.length === 0) {
             return res.status(400).json({ error: "Dados incompletos para salvar histórico." });
