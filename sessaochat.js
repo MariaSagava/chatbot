@@ -82,7 +82,8 @@ async function carregarHistoricoSessoes() {
         if (!response.ok) {
             throw new Error(`Falha ao buscar históricos: ${response.statusText}`);
         }
-        const sessoes = await response.json();
+        const result = await response.json();
+        const sessoes = result.data || [];
         
         historyListContainer.innerHTML = ''; // Limpa o "Carregando..."
 
