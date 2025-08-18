@@ -78,7 +78,7 @@ async function carregarHistoricoSessoes() {
     historyListContainer.innerHTML = '<li>Carregando históricos...</li>';
 
     try {
-        const response = await fetch('/api/chat/historicos');
+        const response = await fetch('/api/chat/historico');
         if (!response.ok) {
             throw new Error(`Falha ao buscar históricos: ${response.statusText}`);
         }
