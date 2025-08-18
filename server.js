@@ -153,17 +153,18 @@ app.get('/api/chat/historico', async (req, res) => {
 
         // Contar total de documentos para informações de paginação
         const totalSessoes = await collection.countDocuments(query);
-        const totalPaginas = Math.ceil(totalSessoes / parseInt(limit));
+        // Evita divisão por zero
+        const totalPaginas = parseInt(limit) > 0 ? Math.ceil(totalSessoes / parseInt(limit)) : 1;
 
         console.log(`[Servidor] Histórico consultado - ${historico.length} sessões encontradas`);
-        
+
         res.status(200).json({
             success: true,
             data: historico,
             pagination: {
                 currentPage: parseInt(page),
-                totalPaginas,
-                totalSessoes,
+                totalPaginas: totalPaginas,
+                totalSessoes: totalSessoes,
                 hasNext: parseInt(page) < totalPaginas,
                 hasPrev: parseInt(page) > 1
             }
