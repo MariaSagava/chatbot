@@ -170,7 +170,7 @@ app.get('/api/chat/historico', async (req, res) => {
         });
 
     } catch (error) {
-        console.error("[Servidor] Erro em /api/chat/historico:", error.message);
+        console.error("[Servidor] Erro em /api/chat/historico:", error);
         res.status(500).json({ error: "Erro interno ao buscar histórico de chat." });
     }
 });
