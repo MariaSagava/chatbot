@@ -162,7 +162,7 @@ app.get('/api/chat/historico', async (req, res) => {
             data: historico,
             pagination: {
                 currentPage: parseInt(page),
-                totalPages,
+                totalPaginas,
                 totalSessoes,
                 hasNext: parseInt(page) < totalPaginas,
                 hasPrev: parseInt(page) > 1
