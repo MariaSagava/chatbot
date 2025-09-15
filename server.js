@@ -1,27 +1,4 @@
-// ENDPOINT PRINCIPAL DO CHAT
-app.post('/api/chat', async (req, res) => {
-    try {
-        // Buscar instrução de sistema do admin
-        const systemCollection = dbHistoria.collection(SYSTEM_COLLECTION);
-        const systemDoc = await systemCollection.findOne({});
-        const systemInstruction = systemDoc?.instruction || "Você é um assistente de física.";
-
-        // Receber mensagem do usuário
-        const { mensagem } = req.body;
-
-        // Monta o prompt para a IA usando a systemInstruction
-        const prompt = `${systemInstruction}\nUsuário: ${mensagem}`;
-
-        // Aqui você faria a chamada real à IA (Gemini, OpenAI, etc)
-        // Exemplo fictício:
-        // const resposta = await chamarGeminiOuOpenAI(prompt);
-
-        // Retorne a resposta (substitua pelo retorno real da IA)
-        res.json({ resposta: "Resposta do bot aqui", systemInstruction });
-    } catch (error) {
-        res.status(500).json({ error: "Erro ao processar mensagem do chat." });
-    }
-});
+// ...existing code...
 const express = require('express');
 const path = require('path');
 const axios = require('axios');
