@@ -1,3 +1,27 @@
+// ENDPOINT PRINCIPAL DO CHAT
+app.post('/api/chat', async (req, res) => {
+    try {
+        // Buscar instrução de sistema do admin
+        const systemCollection = dbHistoria.collection(SYSTEM_COLLECTION);
+        const systemDoc = await systemCollection.findOne({});
+        const systemInstruction = systemDoc?.instruction || "Você é um assistente de física.";
+
+        // Receber mensagem do usuário
+        const { mensagem } = req.body;
+
+        // Monta o prompt para a IA usando a systemInstruction
+        const prompt = `${systemInstruction}\nUsuário: ${mensagem}`;
+
+        // Aqui você faria a chamada real à IA (Gemini, OpenAI, etc)
+        // Exemplo fictício:
+        // const resposta = await chamarGeminiOuOpenAI(prompt);
+
+        // Retorne a resposta (substitua pelo retorno real da IA)
+        res.json({ resposta: "Resposta do bot aqui", systemInstruction });
+    } catch (error) {
+        res.status(500).json({ error: "Erro ao processar mensagem do chat." });
+    }
+});
 const express = require('express');
 const path = require('path');
 const axios = require('axios');
@@ -245,6 +269,69 @@ app.post('/api/weather', async (req, res) => {
     const message = error.response?.data?.message || 'Erro ao obter dados meteorológicos';
     return res.status(status).json({ error: true, message });
   }
+});
+
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "senhaSuperSecreta";
+
+// Coleção para instrução de sistema
+const SYSTEM_COLLECTION = "systemInstruction";
+
+// Middleware simples de autenticação
+function autenticarAdmin(req, res, next) {
+    const senha = req.headers['x-admin-password'];
+    if (!senha || senha !== ADMIN_PASSWORD) {
+        return res.status(403).json({ error: "Acesso negado." });
+    }
+    next();
+}
+
+// Endpoint de métricas
+app.get('/api/admin/stats', autenticarAdmin, async (req, res) => {
+    try {
+        const collection = dbHistoria.collection("sessoesChat");
+        const totalConversas = await collection.countDocuments();
+        const ultimasConversas = await collection.find({})
+            .sort({ startTime: -1 })
+            .limit(5)
+            .toArray();
+        const totalMensagens = await collection.aggregate([
+            { $unwind: "$messages" },
+            { $count: "total" }
+        ]).toArray();
+        res.json({
+            totalConversas,
+            totalMensagens: totalMensagens[0]?.total || 0,
+            ultimasConversas
+        });
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao buscar métricas." });
+    }
+});
+
+// Endpoint GET da instrução de sistema
+app.get('/api/admin/system-instruction', autenticarAdmin, async (req, res) => {
+    try {
+        const collection = dbHistoria.collection(SYSTEM_COLLECTION);
+        const doc = await collection.findOne({});
+        res.json({ instruction: doc?.instruction || "" });
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao buscar instrução." });
+    }
+});
+
+// Endpoint POST para atualizar instrução de sistema
+app.post('/api/admin/system-instruction', autenticarAdmin, express.json(), async (req, res) => {
+    try {
+        const { instruction } = req.body;
+        if (!instruction || instruction.length < 5) {
+            return res.status(400).json({ error: "Instrução inválida." });
+        }
+        const collection = dbHistoria.collection(SYSTEM_COLLECTION);
+        await collection.updateOne({}, { $set: { instruction } }, { upsert: true });
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: "Erro ao salvar instrução." });
+    }
 });
 
 // Iniciar o servidor após tentar conectar aos bancos de dados
