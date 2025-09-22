@@ -1,3 +1,6 @@
+const bcrypt = require('bcrypt');
+// Collection de admins
+const ADMIN_USERS_COLLECTION = 'adminUsers';
 // ...existing code...
 const express = require('express');
 const path = require('path');
@@ -253,13 +256,32 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "senhaSuperSecreta";
 // Coleção para instrução de sistema
 const SYSTEM_COLLECTION = "systemInstruction";
 
-// Middleware simples de autenticação
-function autenticarAdmin(req, res, next) {
-    const senha = req.headers['x-admin-password'];
-    if (!senha || senha !== ADMIN_PASSWORD) {
-        return res.status(403).json({ error: "Acesso negado." });
+// Middleware de autenticação admin usando usuário e senha do banco
+async function autenticarAdmin(req, res, next) {
+    try {
+        const authHeader = req.headers['authorization'];
+        if (!authHeader || !authHeader.startsWith('Basic ')) {
+            return res.status(401).json({ error: 'Credenciais ausentes.' });
+        }
+        const base64 = authHeader.split(' ')[1];
+        const [username, password] = Buffer.from(base64, 'base64').toString().split(':');
+        if (!username || !password) {
+            return res.status(401).json({ error: 'Credenciais inválidas.' });
+        }
+        const collection = dbHistoria.collection(ADMIN_USERS_COLLECTION);
+        const user = await collection.findOne({ username });
+        if (!user) {
+            return res.status(403).json({ error: 'Usuário não encontrado.' });
+        }
+        const valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) {
+            return res.status(403).json({ error: 'Senha incorreta.' });
+        }
+        req.adminUser = user;
+        next();
+    } catch (err) {
+        res.status(500).json({ error: 'Erro na autenticação admin.' });
     }
-    next();
 }
 
 // Endpoint de métricas
