@@ -339,3 +339,86 @@ initializeDatabases().then(() => {
         console.log(`🚀 Servidor rodando na porta ${PORT}`);
     });
 });
+
+// ===== Autenticação de usuário simples (placeholder) =====
+// Em produção, substitua por token/session real.
+function autenticarUsuario(req, res, next) {
+    const userId = req.headers['x-user-id'];
+    if (!userId) {
+        return res.status(401).json({ error: 'Usuário não autenticado. Envie header x-user-id.' });
+    }
+    req.userId = userId;
+    next();
+}
+
+// Endpoint GET /api/user/preferences -> retorna customSystemInstruction do usuário
+app.get('/api/user/preferences', autenticarUsuario, async (req, res) => {
+    if (!dbHistoria) return res.status(503).json({ error: 'DB indisponível.' });
+    try {
+        const usersCol = dbHistoria.collection('users');
+        const user = await usersCol.findOne({ userId: req.userId });
+        res.json({ customSystemInstruction: user?.customSystemInstruction || '' });
+    } catch (err) {
+        console.error('[Servidor] Erro em /api/user/preferences:', err);
+        res.status(500).json({ error: 'Erro ao buscar preferências do usuário.' });
+    }
+});
+
+// Endpoint PUT /api/user/preferences -> atualiza customSystemInstruction do usuário
+app.put('/api/user/preferences', autenticarUsuario, express.json(), async (req, res) => {
+    if (!dbHistoria) return res.status(503).json({ error: 'DB indisponível.' });
+    try {
+        const { customSystemInstruction } = req.body;
+        if (typeof customSystemInstruction !== 'string') {
+            return res.status(400).json({ error: 'Campo customSystemInstruction inválido.' });
+        }
+        const usersCol = dbHistoria.collection('users');
+        await usersCol.updateOne(
+            { userId: req.userId },
+            { $set: { customSystemInstruction } },
+            { upsert: true }
+        );
+        res.json({ success: true });
+    } catch (err) {
+        console.error('[Servidor] Erro em PUT /api/user/preferences:', err);
+        res.status(500).json({ error: 'Erro ao salvar preferências do usuário.' });
+    }
+});
+
+// ENDPOINT PRINCIPAL DO CHAT (prioriza instrução do usuário)
+app.post('/api/chat', express.json(), async (req, res) => {
+    if (!dbHistoria) return res.status(503).json({ error: 'DB indisponível.' });
+    try {
+        const usersCol = dbHistoria.collection('users');
+        const systemCol = dbHistoria.collection(SYSTEM_COLLECTION);
+
+        // 1) Tentar obter instrução personalizada do usuário (se header x-user-id presente)
+        let systemInstruction = null;
+        const userIdHeader = req.headers['x-user-id'];
+        if (userIdHeader) {
+            const userDoc = await usersCol.findOne({ userId: userIdHeader });
+            if (userDoc?.customSystemInstruction && userDoc.customSystemInstruction.trim().length > 0) {
+                systemInstruction = userDoc.customSystemInstruction;
+            }
+        }
+
+        // 2) Se não houver instrução do usuário, buscar instrução global do admin
+        if (!systemInstruction) {
+            const systemDoc = await systemCol.findOne({});
+            systemInstruction = systemDoc?.instruction || 'Você é um assistente de física.';
+        }
+
+        // 3) Preparar prompt / chamada à IA usando systemInstruction
+        const { mensagem } = req.body;
+        const prompt = `${systemInstruction}\nUsuário: ${mensagem}`;
+
+        // Aqui deve ir a chamada real para a IA (ex.: OpenAI / Gemini).
+        // const respostaIA = await chamarAI(prompt);
+
+        // Exemplo de retorno (substituir pela resposta real da IA)
+        res.json({ resposta: 'Resposta gerada pela IA (substituir)', systemInstruction });
+    } catch (err) {
+        console.error('[Servidor] Erro em /api/chat:', err);
+        res.status(500).json({ error: 'Erro ao processar mensagem do chat.' });
+    }
+});
