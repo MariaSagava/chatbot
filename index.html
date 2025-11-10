@@ -56,6 +56,27 @@
             gap: 10px;
         }
 
+        .header-links {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .header-links a {
+            text-decoration: none;
+            color: var(--primary-color);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid transparent;
+            font-weight: 600;
+            transition: background-color 0.15s, border-color 0.15s;
+        }
+
+        .header-links a:hover {
+            background-color: rgba(62,100,255,0.06);
+            border-color: rgba(62,100,255,0.12);
+        }
+
         .logo-icon {
             width: 40px;
             height: 40px;
@@ -513,6 +534,10 @@
             <div class="logo">
                 <div class="logo-icon">PG</div>
                 <div class="logo-text">PhysicsGenius</div>
+            </div>
+            <div class="header-links">
+                <a href="personality.html" target="_blank" rel="noopener noreferrer">Personalidade</a>
+                <a href="admin.html" target="_blank" rel="noopener noreferrer">Admin</a>
             </div>
         </header>
 
