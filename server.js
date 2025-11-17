@@ -7,6 +7,7 @@ const path = require('path');
 const axios = require('axios');
 const { MongoClient } = require('mongodb');
 require('dotenv').config();
+const { safeGenerate } = require('./utils/generative-api');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -412,11 +413,29 @@ app.post('/api/chat', express.json(), async (req, res) => {
         const { mensagem } = req.body;
         const prompt = `${systemInstruction}\nUsuário: ${mensagem}`;
 
-        // Aqui deve ir a chamada real para a IA (ex.: OpenAI / Gemini).
-        // const respostaIA = await chamarAI(prompt);
+        try {
+            // Payload correto para Gemini API v1beta
+            const genPayload = {
+                contents: [
+                    {
+                        parts: [{ text: prompt }]
+                    }
+                ]
+            };
+            const genResp = await safeGenerate(genPayload);
+            // Extrair texto da resposta
+            const data = genResp?.data || {};
+            const candidateText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            const respostaTexto = candidateText || JSON.stringify(data);
 
-        // Exemplo de retorno (substituir pela resposta real da IA)
-        res.json({ resposta: 'Resposta gerada pela IA (substituir)', systemInstruction });
+            return res.json({ resposta: respostaTexto, systemInstruction });
+        } catch (err) {
+            const status = err.response?.status;
+            const errorMsg = err.response?.data?.error?.message || err.message;
+            console.error(`[Servidor] Erro na chamada à Generative API (${status}):`, errorMsg);
+            // Fallback amigável para o usuário
+            return res.json({ resposta: 'O serviço de geração está temporariamente indisponível. Tente novamente em alguns instantes.', systemInstruction });
+        }
     } catch (err) {
         console.error('[Servidor] Erro em /api/chat:', err);
         res.status(500).json({ error: 'Erro ao processar mensagem do chat.' });

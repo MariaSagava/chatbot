@@ -4,30 +4,243 @@
     <meta charset="UTF-8" />
     <title>Personalidade do Bot - PhysicsGenius</title>
     <style>
-        body { font-family: Arial, sans-serif; background:#f7fafc; padding:20px; }
-        .card { max-width:800px; margin:20px auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 8px rgba(0,0,0,0.06); }
-        textarea { width:100%; min-height:160px; font-size:14px; padding:10px; box-sizing:border-box; }
-        button { margin-top:10px; padding:10px 16px; background:#3E64FF; color:#fff; border:none; border-radius:6px; cursor:pointer; }
-        #msg { margin-left:10px; color:green; }
-        .small { color:#666; font-size:13px; margin-top:8px; }
-        input[type="text"]{ width:100%; padding:8px; box-sizing:border-box; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-group textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        .hint {
+            font-size: 13px;
+            color: #666;
+            margin-top: 6px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #save-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 1;
+        }
+
+        #save-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        #save-btn:active {
+            transform: translateY(0);
+        }
+
+        #save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #clear-btn {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        #clear-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .feedback {
+            margin-top: 20px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            display: none;
+            font-weight: 500;
+        }
+
+        .feedback.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .feedback.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #ffffff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .current-instruction {
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+
+        .current-instruction h3 {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+
+        .current-instruction p {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .current-instruction p:empty::before {
+            content: "(Nenhuma personalidade customizada definida)";
+            color: #999;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 24px;
+            }
+
+            .card {
+                padding: 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2>Personalidade do Bot (Personalizada)</h2>
-        <div class="small">Insira aqui uma instrução de sistema que será usada apenas para sua conta. Para testes informe seu userId (header x-user-id) quando fizer requests do chat.</div>
-        <div style="margin-top:10px;">
-            <input id="user-id" placeholder="Seu userId (ex: user123)">
+    <div class="container">
+        <div class="header">
+            <h1>🎭 Personalidade do Bot</h1>
+            <p>Defina como seu assistente de física pessoal deve se comportar</p>
         </div>
-        <div style="margin-top:12px;">
-            <textarea id="custom-instruction" placeholder="Exemplo: Seja objetivo, explique conceitos com exemplos e equações..."></textarea>
-        </div>
-        <div>
-            <button id="save-btn">Salvar Personalidade</button>
-            <span id="msg"></span>
+
+        <div class="card">
+            <div class="form-group">
+                <label>Seu ID de Usuário</label>
+                <input id="user-id" type="text" placeholder="ex: user_123 ou seu email">
+                <p class="hint">Este ID deve ser o mesmo usado ao conversar com o bot</p>
+            </div>
+
+            <div class="form-group">
+                <label>Instrução de Personalidade</label>
+                <textarea id="custom-instruction" placeholder="Exemplo: Você é um mestre de yoga e suas respostas são sempre calmas e reflexivas. Sempre sugira poses correspondentes aos tópicos."></textarea>
+                <p class="hint">Deixe em branco para usar a personalidade global do administrador</p>
+            </div>
+
+            <div class="button-group">
+                <button id="save-btn">💾 Salvar Personalidade</button>
+                <button id="clear-btn">🗑️ Limpar</button>
+            </div>
+
+            <div id="msg" class="feedback"></div>
+
+            <div class="current-instruction">
+                <h3>Personalidade Atual Salva:</h3>
+                <p id="current-instruction-text"></p>
+            </div>
         </div>
     </div>
-    <script src="personality.js" type="module"></script>
+
+    <script src="personality.js"></script>
 </body>
 </html>
