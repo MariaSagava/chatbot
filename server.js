@@ -1,4 +1,5 @@
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 // Collection de admins
 const ADMIN_USERS_COLLECTION = 'adminUsers';
 // ...existing code...
@@ -341,15 +342,30 @@ initializeDatabases().then(() => {
     });
 });
 
-// ===== Autenticação de usuário simples (placeholder) =====
-// Em produção, substitua por token/session real.
+const JWT_SECRET = process.env.JWT_SECRET || 'trocar_em_producao_123!';
+
+// Middleware de autenticação de usuário (aceita Bearer token JWT ou header x-user-id como fallback)
 function autenticarUsuario(req, res, next) {
-    const userId = req.headers['x-user-id'];
-    if (!userId) {
-        return res.status(401).json({ error: 'Usuário não autenticado. Envie header x-user-id.' });
+    try {
+        const authHeader = req.headers['authorization'];
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+            const token = authHeader.split(' ')[1];
+            const payload = jwt.verify(token, JWT_SECRET);
+            req.userId = payload.userId;
+            return next();
+        }
+
+        // Fallback antigo (uso temporário durante migração)
+        const userId = req.headers['x-user-id'];
+        if (userId) {
+            req.userId = userId;
+            return next();
+        }
+
+        return res.status(401).json({ error: 'Usuário não autenticado. Forneça token Bearer ou header x-user-id.' });
+    } catch (err) {
+        return res.status(401).json({ error: 'Token inválido ou expirado.' });
     }
-    req.userId = userId;
-    next();
 }
 
 // Endpoint GET /api/user/preferences -> retorna customSystemInstruction do usuário
@@ -439,5 +455,44 @@ app.post('/api/chat', express.json(), async (req, res) => {
     } catch (err) {
         console.error('[Servidor] Erro em /api/chat:', err);
         res.status(500).json({ error: 'Erro ao processar mensagem do chat.' });
+    }
+});
+
+// ===== Autenticação: registro e login (JWT) =====
+// Registrar novo usuário (simples)
+app.post('/api/auth/register', express.json(), async (req, res) => {
+    if (!dbHistoria) return res.status(503).json({ error: 'DB indisponível.' });
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'username e password obrigatórios.' });
+        const usersCol = dbHistoria.collection('users');
+        const existing = await usersCol.findOne({ username });
+        if (existing) return res.status(409).json({ error: 'Usuário já existe.' });
+        const passwordHash = await bcrypt.hash(password, 10);
+        const userDoc = { userId: username, username, passwordHash, customSystemInstruction: '' };
+        await usersCol.insertOne(userDoc);
+        res.status(201).json({ success: true });
+    } catch (err) {
+        console.error('[Servidor] Erro em /api/auth/register:', err);
+        res.status(500).json({ error: 'Erro ao registrar usuário.' });
+    }
+});
+
+// Login: retorna JWT
+app.post('/api/auth/login', express.json(), async (req, res) => {
+    if (!dbHistoria) return res.status(503).json({ error: 'DB indisponível.' });
+    try {
+        const { username, password } = req.body;
+        if (!username || !password) return res.status(400).json({ error: 'username e password obrigatórios.' });
+        const usersCol = dbHistoria.collection('users');
+        const user = await usersCol.findOne({ username });
+        if (!user) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
+        const valid = await bcrypt.compare(password, user.passwordHash);
+        if (!valid) return res.status(401).json({ error: 'Usuário ou senha inválidos.' });
+        const token = jwt.sign({ userId: user.userId, username: user.username }, JWT_SECRET, { expiresIn: '12h' });
+        res.json({ token, userId: user.userId });
+    } catch (err) {
+        console.error('[Servidor] Erro em /api/auth/login:', err);
+        res.status(500).json({ error: 'Erro ao autenticar usuário.' });
     }
 });

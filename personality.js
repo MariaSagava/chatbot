@@ -42,9 +42,9 @@ async function carregarPreferencia() {
         msgSpan.textContent = 'Carregando...';
         msgSpan.className = 'feedback';
 
-        const res = await fetch('/api/user/preferences', {
-            headers: { 'x-user-id': userId }
-        });
+        const token = localStorage.getItem('authToken');
+        const headers = token ? { 'Authorization': 'Bearer ' + token } : { 'x-user-id': userId };
+        const res = await fetch('/api/user/preferences', { headers });
 
         if (!res.ok) {
             if (res.status === 401) {
@@ -82,12 +82,11 @@ saveBtn.addEventListener('click', async () => {
     saveBtn.textContent = '💾 Salvando...';
 
     try {
+        const token = localStorage.getItem('authToken');
+        const headers = token ? { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token } : { 'Content-Type': 'application/json', 'x-user-id': userId };
         const res = await fetch('/api/user/preferences', {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-user-id': userId
-            },
+            headers,
             body: JSON.stringify({ customSystemInstruction: instruction })
         });
 
